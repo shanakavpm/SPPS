@@ -6,8 +6,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
@@ -15,97 +13,86 @@ from src.config import Config
 from src.data_loader import StudentDataLoader
 from src.preprocessor import StudentPreprocessor
 from src.models import ModelEvaluator
-from src.visualizer import Visualizer
+from src.visualizer import XAIEngine
 
-# Configure root logger
+# Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def run_pipeline():
-    """Main execution function for the Student Performance Prediction System."""
+def run_ml_framework(dataset_type: str = 'bridge'):
+    """
+    Unified Orchestrator for the Student Performance Prediction Framework (Part B).
+    """
+    logger.info(f"--- Starting Framework Execution: Dataset [{dataset_type.upper()}] ---")
+    XAIEngine.setup_style()
+    
     try:
-        # 1. Load Data
-        loader = StudentDataLoader()
-        raw_df = loader.load()
+        # 1. Data Collection Phase
+        if dataset_type == 'uci':
+            raw_df = StudentDataLoader.load_uci()
+            X, y = StudentPreprocessor.process_uci(raw_df)
+        else:
+            # Load a manageable sample for the Bridge dataset
+            raw_df = StudentDataLoader.load_bridge_sample(n_rows=50000)
+            X, y = StudentPreprocessor.process_bridge(raw_df)
 
-        # 2. Preprocess and Engineer Features
-        preprocessor = StudentPreprocessor()
-        X, y = preprocessor.transform(raw_df)
+        # 2. Exploratory Visualization
+        XAIEngine.generate_correlation_heatmap(X)
 
-        # 3. Partition Data First (to prevent leakage in CV/Scaling)
+        # 3. Partitioning & Preprocessing Phase
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, 
-            test_size=Config.TEST_SIZE, 
-            random_state=Config.RANDOM_STATE,
-            stratify=y
+            X, y, test_size=Config.TEST_SIZE, random_state=Config.RANDOM_STATE, stratify=y
         )
 
-        # 4. Handle Imbalance: SMOTE only on Training Data
+        # Handle class imbalance (Part B Requirement)
         smote = SMOTE(random_state=Config.RANDOM_STATE)
-        X_train_res, y_train_res = smote.fit_resample(X_train, y_train)
+        X_res, y_res = smote.fit_resample(X_train, y_train)
 
-        # 5. Standardize Features
+        # Scaling continuous features
         scaler = StandardScaler()
-        X_train_scaled = pd.DataFrame(scaler.fit_transform(X_train_res), columns=X.columns)
-        X_test_scaled = pd.DataFrame(scaler.transform(X_test), columns=X.columns)
+        X_train_sc = pd.DataFrame(scaler.fit_transform(X_res), columns=X.columns)
+        X_test_sc = pd.DataFrame(scaler.transform(X_test), columns=X.columns)
 
-        # 6. Comparative Model Training: LR, RF, XGBoost, SVM, k-NN, LightGBM
-        # Using class_weight='balanced' where possible as an alternative/addition to SMOTE
+        # 4. Model Analysis Phase (Comparative Study)
         models = {
-            'Logistic Regression': LogisticRegression(max_iter=1000, class_weight='balanced', random_state=Config.RANDOM_STATE),
-            'Random Forest': RandomForestClassifier(n_estimators=200, class_weight='balanced', random_state=Config.RANDOM_STATE),
-            'XGBoost': XGBClassifier(eval_metric='logloss', random_state=Config.RANDOM_STATE),
-            'SVM': SVC(probability=True, class_weight='balanced', random_state=Config.RANDOM_STATE),
-            'k-NN': KNeighborsClassifier(n_neighbors=5),
-            'LightGBM': LGBMClassifier(random_state=Config.RANDOM_STATE, verbose=-1)
+            'Logistic Regression': LogisticRegression(max_iter=1000),
+            'Random Forest': RandomForestClassifier(n_estimators=100, n_jobs=-1, random_state=Config.RANDOM_STATE),
+            'XGBoost': XGBClassifier(n_estimators=100, eval_metric='logloss', random_state=Config.RANDOM_STATE),
+            'LightGBM': LGBMClassifier(n_estimators=100, verbose=-1, random_state=Config.RANDOM_STATE)
         }
         
         evaluator = ModelEvaluator(models)
-        metrics = evaluator.run_eval(X_train_scaled, X_test_scaled, y_train_res, y_test)
+        results = evaluator.run_eval(X_train_sc, X_test_sc, y_res, y_test)
+        
+        _print_performance_summary(results)
 
-        # 7. Print Performance Table
-        _display_final_report(metrics)
+        # 5. Multimodal Diagnostics
+        for name, m in results.items():
+            safe_name = name.replace(" ", "_").lower()
+            XAIEngine.generate_diagnostic_plots(m['model'], X_test_sc, y_test, safe_name)
+            XAIEngine.generate_learning_curve(m['model'], X_train_sc, y_res, safe_name)
 
-        # 8. Advanced Visualizations for the Best Model (e.g., Random Forest or LightGBM)
-        Visualizer.setup_style()
-        best_model_name = max(metrics, key=lambda x: metrics[x]['f1'])
-        logger.info(f"Targeting visualizations for the best model: {best_model_name}")
+        # 6. XAI Integration Phase
+        # We use Random Forest as the primary explainer for stability in SHAP/LIME
+        best_model = results['Random Forest']['model']
+        XAIEngine.run_explainability_suite(best_model, X_train_sc, X_test_sc, list(X.columns))
         
-        target_model_data = metrics[best_model_name]
-        model = target_model_data['model']
-        
-        # Diagnostics
-        y_pred = model.predict(X_test_scaled)
-        y_probs = model.predict_proba(X_test_scaled)[:, 1] if hasattr(model, 'predict_proba') else y_pred
-        
-        Visualizer.save_confusion_matrix(y_test, y_pred, best_model_name)
-        Visualizer.save_roc_curve(y_test, y_probs, best_model_name)
-        Visualizer.save_feature_importance(model, list(X.columns), best_model_name)
-        
-        # XAI (SHAP & LIME)
-        Visualizer.save_shap_plots(model, X_test_scaled, list(X.columns))
-        Visualizer.save_lime_explanation(model, X_train_scaled, X_test_scaled, list(X.columns))
-        
-        # PDP (Top 3 features from RF)
-        if hasattr(model, 'feature_importances_'):
-            top_features = [X.columns[i] for i in np.argsort(model.feature_importances_)[-3:]]
-            Visualizer.save_pdp_plot(model, X_train_scaled, top_features)
+        # Global Analysis: Partial Dependence for key engineered features
+        XAIEngine.generate_pdp(best_model, X_train_sc, ['student_ability', 'consistency_index'])
 
-        logger.info("Pipeline executed successfully. Enhanced outputs available in 'reports/'.")
+        logger.info("Pipeline completed. Check 'reports/' for all visual evidence.")
 
     except Exception as e:
-        logger.error(f"Critical error in pipeline: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"Pipeline failure: {e}")
         raise
 
-def _display_final_report(metrics: dict):
-    """Prints a professional markdown performance table to console."""
-    print("\n### Performance Comparison Table (with 5-Fold Cross-Validation)")
-    print("| Model | Test Acc | CV Mean Acc | CV Std | Precision | Recall | F1-Score | ROC-AUC |")
-    print("|-------|----------|-------------|--------|-----------|--------|----------|---------|")
-    for name, m in metrics.items():
-        print(f"| {name} | {m['accuracy']:.4f} | {m['cv_accuracy_mean']:.4f} | {m['cv_accuracy_std']:.3f} | {m['precision']:.4f} | {m['recall']:.4f} | {m['f1']:.4f} | {m['roc_auc']:.4f} |")
+def _print_performance_summary(results):
+    print("\n" + "="*80)
+    print(f"{'Model':<25} | {'Acc':<8} | {'CV Mean':<8} | {'F1':<8} | {'AUC':<8}")
+    print("-" * 80)
+    for name, m in results.items():
+        print(f"{name:<25} | {m['accuracy']:.4f} | {m['cv_accuracy_mean']:.4f} | {m['f1']:.4f} | {m['roc_auc']:.4f}")
+    print("="*80 + "\n")
 
 if __name__ == "__main__":
-    run_pipeline()
+    run_ml_framework(dataset_type='bridge')
