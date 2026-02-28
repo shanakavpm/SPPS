@@ -43,10 +43,21 @@ class StudentPreprocessor:
         # Consistency Index: Uniformity between Math and Portuguese performance
         df['consistency_index'] = 1 - (abs(df['G3_mat'] - df['G3_por']) / 20)
         
-        # Mastery Trend: Growth from G1 to G3 for the primary subject (Math)
-        df['mastery_trend'] = df['G3_mat'] - df['G1_mat']
+        # Mastery Trend: Growth from G1 to G2 for the primary subject (Math)
+        # Using G2 since G3 is the target
+        df['mastery_trend'] = df['G2_mat'] - df['G1_mat']
         
         # Absence Impact: Aggregated absenteeism across both disciplines
         df['absence_impact'] = df['absences_mat'] + df['absences_por']
+
+        # NEW: Relative Engagement (Scale engagement by maximum observed)
+        df['relative_studytime'] = df['studytime_mat'] / (df['studytime_mat'].max() + 0.1)
         
+        # NEW: Interaction terms
+        # Interaction between failures and absences (often highly predictive of risk)
+        df['failure_absence_interaction'] = df['failures_mat'] * df['absences_mat']
+        
+        # Interaction between social life and mother's education (proxy for socioeconomic/social balance)
+        df['social_edu_interaction'] = df['goout_mat'] * df['Medu']
+
         return df

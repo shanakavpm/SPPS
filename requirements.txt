@@ -6,3 +6,5 @@ shap
 matplotlib
 seaborn
 imbalanced-learn
+lime
+lightgbm
