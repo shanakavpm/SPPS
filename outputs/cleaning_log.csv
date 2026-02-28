@@ -1,0 +1,6 @@
+Step,Action
+Loading,"Chunked loading of 50,000 Bridge to Algebra rows"
+Imputation,"Median fill for numeric, ""Unknown"" for categories"
+Balancing,Applied SMOTE to training set for class parity
+Scaling,StandardScaler applied to all model features
+Engineering,"Calculated Mastery, Consistency, and Timeliness metrics"

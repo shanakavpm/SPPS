@@ -8,3 +8,11 @@ seaborn
 imbalanced-learn
 lime
 lightgbm
+geopandas
+folium
+networkx
+contextily
+scipy
+pysal
+libpysal
+esda
