@@ -166,125 +166,32 @@ class XAIEngine:
         plt.savefig(os.path.join(Config.REPORTS_DIR, 'geo_choropleth_surrogate.png'))
         plt.close()
 
-    @staticmethod
-    def generate_network_visuals(df: pd.DataFrame):
-        """Requirement C: 5 Graph Figures with robust clarity."""
-        logger.info("Generating 5-Graph Network Suite (Robust Clarity)...")
-        # Build Relationship: Common Students across KCs
-        subset = df.head(5000)
-        G = nx.Graph()
-        
-        # Edges between Knowledge Components based on co-occurrence
-        nodes = subset['kc_node'].unique()
-        G.add_nodes_from(nodes)
-        
-        for student, group in subset.groupby('Anon Student Id'):
-            kcs = group['kc_node'].unique()
-            for i in range(len(kcs)):
-                for j in range(i + 1, len(kcs)):
-                    if G.has_edge(kcs[i], kcs[j]):
-                        G[kcs[i]][kcs[j]]['weight'] += 1
-                    else:
-                        G.add_edge(kcs[i], kcs[j], weight=1)
 
-        # Dynamic Filtering: Only filter if the network is very dense
-        if len(G.edges) > 200:
-            edges_to_keep = [(u, v) for u, v, d in G.edges(data=True) if d['weight'] > 1]
-            G_filtered = G.edge_subgraph(edges_to_keep).copy()
-            if len(G_filtered.edges) < 10: # Fallback if filter is too aggressive
-                G_filtered = G.copy()
-        else:
-            G_filtered = G.copy()
-
-        if len(G_filtered.nodes) == 0:
-            logger.warning("Empty Graph generated; skipping network visuals.")
-            return
-
-        # 1. Overall Network Layout (Larger and Spaced)
-        plt.figure(figsize=(15, 15))
-        pos = nx.spring_layout(G_filtered, k=0.4, seed=42) 
-        nx.draw_networkx_nodes(G_filtered, pos, node_size=60, node_color='#3498db', alpha=0.7)
-        nx.draw_networkx_edges(G_filtered, pos, width=0.6, edge_color='grey', alpha=0.3)
-        plt.title("Graph 1: Overall KC Network Structure")
-        plt.axis('off')
-        plt.savefig(os.path.join(Config.REPORTS_DIR, 'graph_overall.png'), dpi=300, bbox_inches='tight')
-        plt.close()
-
-        # 2. Top Hubs Subgraph
-        degrees = dict(G_filtered.degree())
-        if len(degrees) > 0:
-            top_hubs = sorted(degrees, key=degrees.get, reverse=True)[:10]
-            H = G_filtered.subgraph(top_hubs)
-            plt.figure(figsize=(12, 10))
-            pos_h = nx.kamada_kawai_layout(H) 
-            # Truncate labels for hubs as well
-            hub_labels = {n: (n[:20] + '...') if len(n) > 23 else n for n in H.nodes()}
-            nx.draw(H, pos_h, with_labels=False, node_color='#e67e22', node_size=1800)
-            nx.draw_networkx_labels(H, pos_h, labels=hub_labels, font_size=9, font_weight='bold')
-            plt.title("Graph 2: Top 10 KC Hubs (Truncated Labels)")
-            plt.savefig(os.path.join(Config.REPORTS_DIR, 'graph_top_hubs.png'), dpi=300)
-            plt.close()
-
-        # 3. Community Visualization
-        plt.figure(figsize=(12, 12))
-        nx.draw(G_filtered, pos, node_color=range(len(G_filtered.nodes())), cmap=plt.cm.Paired, node_size=100, alpha=0.8)
-        plt.title("Graph 3: KC Knowledge Clusters")
-        plt.savefig(os.path.join(Config.REPORTS_DIR, 'graph_communities.png'), dpi=300)
-        plt.close()
-
-        # 4. Ego Network (Selective Labeling for Clarity)
-        if len(degrees) > 0:
-            central_node = max(degrees, key=degrees.get)
-            # Limit Ego network to center + its neighbors (radius=1)
-            ego = nx.ego_graph(G_filtered, central_node, radius=1)
-            
-            plt.figure(figsize=(12, 12))
-            # Large k (repulsion) to prevent overlap
-            pos_e = nx.spring_layout(ego, k=1.5, seed=42)
-            
-            # Identify top 5 neighbors by edge weight to central_node to label
-            neighbor_weights = {n: G_filtered[central_node][n]['weight'] for n in ego.neighbors(central_node)}
-            top_neighbors = sorted(neighbor_weights, key=neighbor_weights.get, reverse=True)[:5]
-            labels_to_show = {central_node: central_node}
-            for n in top_neighbors:
-                # Truncate long labels for aesthetic clarity
-                labels_to_show[n] = (n[:22] + '...') if len(n) > 25 else n
-            
-            # Draw nodes with size proportional to connectivity
-            node_sizes = [2000 if n == central_node else 800 for n in ego.nodes()]
-            node_colors = ['#e74c3c' if n == central_node else '#2ecc71' for n in ego.nodes()]
-            
-            nx.draw_networkx_nodes(ego, pos_e, node_size=node_sizes, node_color=node_colors, alpha=0.9)
-            nx.draw_networkx_edges(ego, pos_e, alpha=0.3, edge_color='grey')
-            nx.draw_networkx_labels(ego, pos_e, labels=labels_to_show, font_size=9, font_weight='bold')
-            
-            plt.title(f"Graph 4: Local Ecosystem for '{central_node[:30]}...'", fontsize=14)
-            plt.axis('off')
-            plt.savefig(os.path.join(Config.REPORTS_DIR, 'graph_ego_network.png'), dpi=300, bbox_inches='tight')
-            plt.close()
-
-        # 5. Adjacency Heatmap
-        if len(G_filtered.nodes) > 0:
-            adj_matrix = nx.to_numpy_array(G_filtered)
-            if adj_matrix.size > 0:
-                plt.figure(figsize=(12, 10))
-                sns.heatmap(adj_matrix, cmap='viridis', xticklabels=False, yticklabels=False)
-                plt.title("Graph 5: KC Adjacency Matrix intensity")
-                plt.savefig(os.path.join(Config.REPORTS_DIR, 'graph_adjacency_heatmap.png'), dpi=300)
-                plt.close()
 
     @staticmethod
-    def run_explainability_suite(model: Any, X_train: pd.DataFrame, X_test: pd.DataFrame, feature_names: List[str]):
-        logger.info("Starting XAI explanation suite...")
+    def run_explainability_suite(model: Any, X_train: pd.DataFrame, X_test: pd.DataFrame, feature_names: List[str], model_name: str = "model", plot_global: bool = True):
+        logger.info(f"Starting XAI explanation suite for {model_name}...")
         
         # Global Feature Importance
-        if hasattr(model, 'feature_importances_'):
-            imps = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
-            plt.figure()
-            imps.plot(kind='barh').invert_yaxis()
-            plt.title("Global Feature Importances")
-            plt.savefig(os.path.join(Config.REPORTS_DIR, 'global_importance.png'))
-            plt.close()
+        safe_model_name = model_name.lower().replace(" ", "_")
+        
+        if plot_global:
+            if hasattr(model, 'coef_'):
+                # Logistic Regression absolute coefficients
+                coefs = np.abs(model.coef_[0])
+                imps = pd.Series(coefs, index=feature_names).sort_values(ascending=False).head(15)
+                plt.figure()
+                imps.plot(kind='barh').invert_yaxis()
+                plt.title(f"{model_name} Feature Importance (Abs Coefficients)")
+                plt.savefig(os.path.join(Config.REPORTS_DIR, f'global_importance_{safe_model_name}.png'))
+                plt.close()
+            elif hasattr(model, 'feature_importances_'):
+                imps = pd.Series(model.feature_importances_, index=feature_names).sort_values(ascending=False).head(15)
+                plt.figure()
+                imps.plot(kind='barh').invert_yaxis()
+                plt.title(f"Tree-based Global Feature Importances ({model_name})")
+                plt.savefig(os.path.join(Config.REPORTS_DIR, f'global_importance_{safe_model_name}.png'))
+                plt.close()
 
         # SHAP Summary
         X_sample = X_test.sample(min(len(X_test), Config.SHAP_SAMPLE_SIZE))

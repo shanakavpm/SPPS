@@ -82,11 +82,16 @@ def run_ml_framework():
         XAIEngine.generate_learning_curve(best_model, X_train_sc, y_res, 'Random_Forest')
 
         XAIEngine.generate_geo_visuals(df_viz)
-        XAIEngine.generate_network_visuals(X_all)
 
         # 6. Explainability
-        logger.info("Running XAI explanations (SHAP/LIME)...")
-        XAIEngine.run_explainability_suite(best_model, X_train_sc, X_test_sc, model_features)
+        logger.info("Running XAI explanations (SHAP/LIME/Coefs)...")
+        log_reg_model = results['Logistic Regression']['model']
+        XAIEngine.run_explainability_suite(log_reg_model, X_train_sc, X_test_sc, model_features, model_name="Logistic Regression")
+        
+        # Also run SHAP on the best model (Random Forest) but without re-plotting global block
+        best_model = results['Random Forest']['model']
+        XAIEngine.run_explainability_suite(best_model, X_train_sc, X_test_sc, model_features, model_name="Random Forest", plot_global=False)
+        
         XAIEngine.generate_pdp(best_model, X_train_sc, model_features[:3])
 
         # 7. Deliverables & Audit Logs
