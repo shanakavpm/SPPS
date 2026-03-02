@@ -32,5 +32,9 @@ This project is a high-performance research framework designed to predict studen
 - **Why this result? (XAI)**: Uses SHAP and LIME to explain exactly which factors (like consistency or prior skill) influenced the score.
 - **Multi-View Maps**: Visualizes regional educational disparities and skills dependencies.
 
+## 📊 Dataset Source
+
+- PSLC DataShop (2010) KDD Cup 2010 Educational Data Mining Challenge. Available at: https://pslcdatashop.web.cmu.edu/KDDCup/
+
 ---
 **Course**: Data Visualization Research Project | **Status**: Complete & Verified
