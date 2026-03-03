@@ -182,7 +182,7 @@ def run_pipeline():
 
         # Cleaning Log
         cleaning_log = pd.DataFrame([
-            {'Step': '1. Loading', 'Action': 'Loaded 50,000 rows from Bridge to Algebra (KDD Cup 2010)'},
+            {'Step': '1. Loading', 'Action': 'Loaded 500,000 rows from Bridge to Algebra (KDD Cup 2010)'},
             {'Step': '2. Duplicates', 'Action': 'Removed exact duplicate rows using drop_duplicates()'},
             {'Step': '3. Missing Values', 'Action': 'Median imputation for numeric columns; "Unknown" fill for categorical'},
             {'Step': '4. Encoding', 'Action': 'Problem Hierarchy converted to ordinal codes via .cat.codes'},

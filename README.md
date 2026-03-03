@@ -13,7 +13,8 @@ A machine learning framework for predicting student success using the KDD Cup 20
 2. **Run the Pipeline**:
 
    ```bash
-   python main.py
+   python main.py   # Windows
+   python3 main.py  # Ubuntu / Linux / macOS
    ```
 
 3. **View Results**:

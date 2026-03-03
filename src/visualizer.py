@@ -15,7 +15,7 @@ import logging
 import shap
 import lime
 import lime.lime_tabular
-import matplotlib
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
