@@ -1,6 +1,13 @@
-Visual,Filename,Insight
-Statistical Suite,correlation_heatmap.png,Feature Associations
-Mastery Trend,slope_chart_mastery.png,Learning Velocity
-Spatial Risk,geo_static_points.png,District Disparities
-Curriculum Network,graph_overall.png,Skill Hubs
-XAI Global,shap_summary.png,Factor Attribution
+Visual,Filename,Purpose
+Correlation Heatmap,correlation_heatmap.png,Feature association analysis
+Target Distribution,target_distribution.png,Class balance inspection
+Feature Box Plots,feature_boxplots.png,Feature distribution & outliers
+Mastery Slope Chart,slope_chart_mastery.png,Learning velocity visualization
+Confusion Matrices,cm_*.png,Classification error analysis
+ROC Curves,roc_*.png,Discrimination ability
+Learning Curve,lc_*.png,Overfitting / underfitting detection
+SHAP Summary,shap_summary_*.png,Global feature attribution (XAI)
+SHAP Force Plot,shap_force_*.png,Individual student explanation (XAI)
+LIME Explanation,lime_local_*.png,Local model approximation (XAI)
+PDP Analysis,pdp_analysis.png,Marginal feature effects (XAI)
+Global Importance,global_importance_*.png,Feature ranking per model (XAI)

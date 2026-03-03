@@ -1,6 +1,8 @@
 Step,Action
-Loading,"Chunked loading of 50,000 Bridge to Algebra rows"
-Imputation,"Median fill for numeric, ""Unknown"" for categories"
-Balancing,Applied SMOTE to training set for class parity
-Scaling,StandardScaler applied to all model features
-Engineering,"Calculated Mastery, Consistency, and Timeliness metrics"
+1. Loading,"Loaded 50,000 rows from Bridge to Algebra (KDD Cup 2010)"
+2. Duplicates,Removed exact duplicate rows using drop_duplicates()
+3. Missing Values,"Median imputation for numeric columns; ""Unknown"" fill for categorical"
+4. Encoding,Problem Hierarchy converted to ordinal codes via .cat.codes
+5. Feature Engineering,"Derived: engagement_ratio, consistency_index, mastery_trend, timeliness, student_ability, problem_difficulty"
+6. Balancing,Applied SMOTE to training set for class balance
+7. Scaling,"StandardScaler applied to all model features (zero mean, unit variance)"

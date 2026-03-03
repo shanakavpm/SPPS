@@ -1,40 +1,49 @@
 # 🎓 Student Performance Prediction System (SPPS)
 
-This project is a high-performance research framework designed to predict student success. It provides deep analytical insights through **Statistical**, **Geographic**, and **Network Science** visualizations.
+A machine learning framework for predicting student success using the KDD Cup 2010 (Bridge to Algebra) dataset. Includes rigorous data preprocessing, comparative model evaluation, and Explainable AI integration.
 
-## 🚀 Quick Start (3 Steps)
+## 🚀 Quick Start
 
-1. **Setup Environment**:
+1. **Install Dependencies**:
+
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Run Analysis**:
+2. **Run the Pipeline**:
+
    ```bash
-   python3 main.py
+   python main.py
    ```
 
 3. **View Results**:
-   - 📊 **Charts**: Check the `figures/` folder (PNG).
-   - 🗺️ **Interactive Maps**: Check the `outputs/` folder (HTML).
-   - 📝 **Final Report**: Open `student_performance_research.ipynb`.
+   - 📊 **Figures**: `figures/` — all charts (SHAP, LIME, PDP, confusion matrices, ROC curves, etc.)
+   - 📝 **Outputs**: `outputs/` — cleaned data, data dictionary, cleaning log, comparative analysis report
 
-## 📂 Folder Breakdown
+## 📂 Project Structure
 
-- **`main.py`**: The one-click script to run the whole pipeline.
-- **`src/`**: The "brain" of the project (Data Loading, Processing, AI Models).
-- **`figures/`**: Contains all 20+ generated charts (Learning curves, SHAP, Networks).
-- **`outputs/`**: Contains interactive maps and the cleaned dataset for review.
+- **`main.py`** — Main pipeline: preprocessing → training → evaluation → XAI
+- **`src/config.py`** — Centralized configuration
+- **`src/data_loader.py`** — KDD Cup dataset loader
+- **`src/preprocessor.py`** — Data cleaning, encoding, and feature engineering
+- **`src/models.py`** — Traditional ML model training with cross-validation
+- **`src/lstm_model.py`** — LSTM & GRU sequence models for temporal patterns
+- **`src/visualizer.py`** — Statistical visuals, diagnostics, and XAI engine
 
 ## ✨ Key Capabilities
 
-- **Smart Predictions**: Uses AI (XGBoost/Random Forest) to find at-risk students with 85%+ accuracy.
-- **Why this result? (XAI)**: Uses SHAP and LIME to explain exactly which factors (like consistency or prior skill) influenced the score.
-- **Multi-View Maps**: Visualizes regional educational disparities and skills dependencies.
+| Area                    | Details                                                                                                                   |
+| :---------------------- | :------------------------------------------------------------------------------------------------------------------------ |
+| **Preprocessing (Q4)**  | Duplicate removal, missing value imputation, categorical encoding, 6 engineered features, SMOTE balancing, StandardScaler |
+| **ML Models (Q5)**      | Logistic Regression, Random Forest, XGBoost, LightGBM, LSTM, GRU — with 5-fold stratified CV                              |
+| **Explainable AI (Q6)** | SHAP summary & force plots, LIME, PDP, feature importance, transparent vs. black-box comparison                           |
 
-## 📊 Dataset Source
+## 📊 Dataset
 
-- PSLC DataShop (2010) KDD Cup 2010 Educational Data Mining Challenge. Available at: https://pslcdatashop.web.cmu.edu/KDDCup/
+- **Source**: PSLC DataShop (2010) KDD Cup 2010 Educational Data Mining Challenge
+- **URL**: https://pslcdatashop.web.cmu.edu/KDDCup/
+- **Target**: Binary classification — Correct First Attempt (1 = pass, 0 = fail)
 
 ---
-**Course**: Data Visualization Research Project | **Status**: Complete & Verified
+
+**Course**: Data Visualization Research Project

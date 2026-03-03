@@ -1,65 +1,114 @@
 import pandas as pd
 import numpy as np
+import logging
 from typing import Tuple
 from .config import Config
 
-class StudentPreprocessor:
-    """Specialized preprocessor for the Bridge to Algebra large-scale educational dataset."""
-    
-    @staticmethod
-    def process_bridge(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        """Specific logic for KDD Cup / Bridge to Algebra dataset with advanced feature engineering and synthetic metadata."""
-        df = df.copy()
-        
-        # 1. Target Definition
-        df[Config.TARGET_COLUMN] = pd.to_numeric(df['Correct First Attempt'], errors='coerce').fillna(0).astype(int)
-        
-        # 2. Synthetic Geography (For Temple requirements: 5 Maps)
-        # Map students to school districts and coordinates
-        districts = [f"District_{i}" for i in range(1, 11)]
-        district_map = {sid: np.random.choice(districts) for sid in df['Anon Student Id'].unique()}
-        df['geo_region'] = df['Anon Student Id'].map(district_map)
-        
-        # Coordinate mapping for hotspot maps (Shifted inland to avoid ocean)
-        coords = {
-            f"District_{i}": (34.15 + np.random.normal(0, 0.2), -117.80 + np.random.normal(0, 0.2)) 
-            for i in range(1, 11)
-        }
-        df['latitude'] = df['geo_region'].map(lambda x: coords[x][0] + np.random.normal(0, 0.03))
-        df['longitude'] = df['geo_region'].map(lambda x: coords[x][1] + np.random.normal(0, 0.03))
+logger = logging.getLogger(__name__)
 
-        # 3. Advanced Feature Engineering
+
+class StudentPreprocessor:
+    """
+    Rigorous preprocessing pipeline for the Bridge to Algebra educational dataset.
+
+    Pipeline Steps:
+        1. Duplicate Removal      — eliminate exact duplicate rows
+        2. Target Definition      — define binary classification target
+        3. Missing Value Handling  — median imputation (numeric), 'Unknown' (categorical)
+        4. Categorical Encoding   — convert text categories to numerical codes
+        5. Feature Engineering     — derive engagement, consistency, mastery, and timeliness
+        6. Feature Selection       — retain only model-relevant columns
+        7. Final Imputation        — fill any residual NaN with column medians
+    """
+
+    @staticmethod
+    def process_bridge(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
+        """
+        Full preprocessing for KDD Cup / Bridge to Algebra dataset.
+
+        Returns:
+            X (pd.DataFrame): Feature matrix with engineered attributes.
+            y (pd.Series):    Binary target (1 = Correct First Attempt, 0 = Incorrect).
+        """
+        df = df.copy()
+
+        # ── Step 1: Remove Duplicate Entries ──────────────────────────────────
+        initial_rows = len(df)
+        df.drop_duplicates(inplace=True)
+        dropped = initial_rows - len(df)
+        logger.info(f"Duplicate removal: {dropped} duplicates dropped ({initial_rows} → {len(df)} rows)")
+
+        # ── Step 2: Target Variable Definition ────────────────────────────────
+        # Binary classification: 1 = student got the step correct on first try
+        df[Config.TARGET_COLUMN] = (
+            pd.to_numeric(df['Correct First Attempt'], errors='coerce')
+            .fillna(0)
+            .astype(int)
+        )
+
+        # ── Step 3: Missing Value Handling ────────────────────────────────────
+        # Numeric columns: impute with column median (robust to outliers)
+        numeric_cols = df.select_dtypes(include=[np.number]).columns
+        df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
+
+        # Categorical columns: fill with 'Unknown' sentinel
+        df['KC(SubSkills)'] = df['KC(SubSkills)'].fillna('Unknown')
+        df['Problem Name'] = df['Problem Name'].fillna('Unknown')
+        df['Problem Hierarchy'] = df['Problem Hierarchy'].fillna('Unknown')
+
+        logger.info(f"Missing values handled — numeric: median imputation, categorical: 'Unknown' fill")
+
+        # ── Step 4: Categorical Variable Encoding ─────────────────────────────
+        # Problem Hierarchy: ordinal encoding via pandas category codes
+        df['Problem Hierarchy'] = df['Problem Hierarchy'].astype('category').cat.codes
+
+        logger.info("Categorical variables encoded to numerical form")
+
+        # ── Step 5: Feature Engineering ───────────────────────────────────────
+        # 5a. Engagement Ratio — total number of interactions per student
+        #     Higher engagement typically correlates with better performance
         df['engagement_ratio'] = df.groupby('Anon Student Id')['Anon Student Id'].transform('count')
-        df['consistency_index'] = 1 / (df.groupby('Anon Student Id')['Step Duration (sec)'].transform('std').fillna(0) + 1)
-        
-        # Mastery Trend: Cumulative success rate (vectorized for speed)
+
+        # 5b. Consistency Index — inverse of response-time variability
+        #     A consistent student has low variance in step durations
+        df['consistency_index'] = 1 / (
+            df.groupby('Anon Student Id')['Step Duration (sec)'].transform('std').fillna(0) + 1
+        )
+
+        # 5c. Mastery Trend — expanding cumulative success rate over time
+        #     Captures learning velocity: is the student improving?
         df = df.sort_values(['Anon Student Id', 'Step Start Time'])
-        groups = df.groupby(['Anon Student Id'])[Config.TARGET_COLUMN]
-        df['mastery_trend'] = groups.cumsum() / (df.groupby('Anon Student Id').cumcount() + 1)
-        
-        # Timeliness: 1 if duration is below median (faster than average), else 0
+        df['mastery_trend'] = (
+            df.groupby('Anon Student Id')[Config.TARGET_COLUMN].cumsum()
+            / (df.groupby('Anon Student Id').cumcount() + 1)
+        )
+
+        # 5d. Timeliness — binary flag for response speed
+        #     1 = faster than median response time, 0 = slower
         median_dur = df['Step Duration (sec)'].median()
         df['timeliness'] = (df['Step Duration (sec)'] < median_dur).astype(int)
-        
-        # Traditional Features
+
+        # 5e. Student Ability — historical mean success rate per student
         df['student_ability'] = df.groupby('Anon Student Id')[Config.TARGET_COLUMN].transform('mean')
+
+        # 5f. Problem Difficulty — baseline success rate across all students per problem
         df['problem_difficulty'] = df.groupby('Problem Name')[Config.TARGET_COLUMN].transform('mean')
-        
-        # 4. Network Metadata (For Template requirements: 5 Graphs)
-        # Relationship: Student-KC mapping
-        df['kc_node'] = df['KC(SubSkills)'].fillna('Unknown_KC')
-        
-        # 5. Categorical Handling
-        df['Problem Hierarchy'] = df['Problem Hierarchy'].astype('category').cat.codes
-        
-        # 6. Feature Selection (Include Geo and Graph data for visuals)
+
+        logger.info("Feature engineering complete: engagement_ratio, consistency_index, "
+                     "mastery_trend, timeliness, student_ability, problem_difficulty")
+
+        # ── Step 6: Feature Selection ─────────────────────────────────────────
         feature_cols = [
-            'student_ability', 'problem_difficulty', 'Problem Hierarchy', 
-            'Step Duration (sec)', 'engagement_ratio', 'consistency_index', 'mastery_trend',
-            'timeliness', 'latitude', 'longitude', 'geo_region', 'kc_node', 'Anon Student Id'
+            'student_ability', 'problem_difficulty', 'Problem Hierarchy',
+            'Step Duration (sec)', 'engagement_ratio', 'consistency_index',
+            'mastery_trend', 'timeliness', 'Anon Student Id'
         ]
         X = df[feature_cols].copy()
+
+        # ── Step 7: Final Imputation ──────────────────────────────────────────
         X = X.fillna(X.median(numeric_only=True))
-        
+
         y = df[Config.TARGET_COLUMN].reset_index(drop=True)
+
+        logger.info(f"Preprocessing complete — X shape: {X.shape}, y shape: {y.shape}")
         return X, y
