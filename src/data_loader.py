@@ -48,13 +48,7 @@ class StudentDataLoader:
     def _generate_synthetic(n_rows: int = 50000) -> pd.DataFrame:
         """
         Generate a realistic synthetic educational dataset matching the
-        Bridge to Algebra schema.
-
-        Simulates:
-            - 500 unique students with varying ability levels
-            - 200 unique problems with varying difficulty
-            - 15 knowledge component (KC) categories
-            - Realistic step durations and correctness patterns
+        Bridge to Algebra schema using vectorized NumPy operations.
         """
         np.random.seed(Config.RANDOM_STATE)
 
@@ -62,52 +56,59 @@ class StudentDataLoader:
         n_problems = 200
         n_kcs = 15
 
-        student_ids = [f"Student_{i:04d}" for i in range(n_students)]
-        problem_names = [f"Problem_{i:03d}" for i in range(n_problems)]
-        hierarchies = [f"Unit_{u}, Section_{s}" for u in range(1, 6) for s in range(1, 5)]
-        kc_skills = [f"KC_Skill_{k}" for k in range(1, n_kcs + 1)]
+        student_ids = np.array([f"Student_{i:04d}" for i in range(n_students)])
+        problem_names = np.array([f"Problem_{i:03d}" for i in range(n_problems)])
+        hierarchies = np.array([f"Unit_{u}, Section_{s}" for u in range(1, 6) for s in range(1, 4)])
+        kc_skills = np.array([f"KC_Skill_{k}" for k in range(1, n_kcs + 1)])
 
-        # Assign innate ability per student (some strong, some weak)
-        student_ability = {s: np.clip(np.random.normal(0.6, 0.2), 0.1, 0.95) for s in student_ids}
-        problem_difficulty = {p: np.clip(np.random.normal(0.5, 0.25), 0.05, 0.95) for p in problem_names}
+        # Assign innate ability per student and difficulty per problem
+        student_ability_vals = np.clip(np.random.normal(0.6, 0.2, n_students), 0.1, 0.95)
+        problem_difficulty_vals = np.clip(np.random.normal(0.5, 0.25, n_problems), 0.05, 0.95)
 
-        records = []
-        base_time = pd.Timestamp("2008-09-01 08:00:00")
+        # Generate indices for random choices
+        student_idx = np.random.randint(0, n_students, size=n_rows)
+        problem_idx = np.random.randint(0, n_problems, size=n_rows)
+        hierarchy_idx = np.random.randint(0, len(hierarchies), size=n_rows)
+        kc_idx = np.random.randint(0, n_kcs, size=n_rows)
 
-        for i in range(n_rows):
-            sid = np.random.choice(student_ids)
-            pid = np.random.choice(problem_names)
-            ability = student_ability[sid]
-            difficulty = problem_difficulty[pid]
+        # Map to actual values
+        sids = student_ids[student_idx]
+        pids = problem_names[problem_idx]
+        abils = student_ability_vals[student_idx]
+        diffs = problem_difficulty_vals[problem_idx]
 
-            # Probability of correct = f(ability, difficulty)
-            p_correct = np.clip(ability * (1 - difficulty * 0.5) + np.random.normal(0, 0.05), 0, 1)
-            correct = int(np.random.random() < p_correct)
+        # Probability of correct = f(ability, difficulty)
+        p_correct = np.clip(abils * (1 - diffs * 0.5) + np.random.normal(0, 0.05, size=n_rows), 0, 1)
+        correct = (np.random.random(size=n_rows) < p_correct).astype(int)
 
-            # Step duration: faster students tend to be quicker; harder problems take longer
-            base_duration = 20 + (1 - ability) * 30 + difficulty * 40
-            duration = max(1, base_duration + np.random.normal(0, 15))
+        # Step duration calculation
+        base_durations = 20 + (1 - abils) * 30 + diffs * 40
+        durations = np.maximum(1, base_durations + np.random.normal(0, 15, size=n_rows))
 
-            start_time = base_time + pd.Timedelta(seconds=i * 5 + np.random.randint(0, 100))
-            end_time = start_time + pd.Timedelta(seconds=duration)
+        # Time generation
+        base_time = np.datetime64("2008-09-01 08:00:00")
+        offsets = (np.arange(n_rows) * 5 + np.random.randint(0, 100, size=n_rows)).astype('timedelta64[s]')
+        start_times = base_time + offsets
+        end_times = start_times + durations.astype('timedelta64[s]')
 
-            # Some KC entries are NaN (mimics real data)
-            kc = np.random.choice(kc_skills) if np.random.random() > 0.15 else np.nan
+        # Knowledge Categories (with 15% NaN)
+        kcs = kc_skills[kc_idx]
+        kc_mask = np.random.random(size=n_rows) <= 0.15
+        kcs_list = kcs.astype(object)
+        kcs_list[kc_mask] = np.nan
 
-            records.append({
-                'Anon Student Id': sid,
-                'Problem Name': pid,
-                'Problem Hierarchy': np.random.choice(hierarchies),
-                'Correct First Attempt': correct,
-                'Step Duration (sec)': round(duration, 2),
-                'Step Start Time': str(start_time),
-                'Step End Time': str(end_time),
-                'KC(SubSkills)': kc
-            })
+        df = pd.DataFrame({
+            'Anon Student Id': sids,
+            'Problem Name': pids,
+            'Problem Hierarchy': hierarchies[hierarchy_idx],
+            'Correct First Attempt': correct,
+            'Step Duration (sec)': np.round(durations, 2),
+            'Step Start Time': start_times.astype(str),
+            'Step End Time': end_times.astype(str),
+            'KC(SubSkills)': kcs_list
+        })
 
-        df = pd.DataFrame(records)
-        logger.info(f"Synthetic dataset generated: {len(df)} records, "
-                     f"{n_students} students, {n_problems} problems")
+        logger.info(f"Synthetic dataset generated (vectorized): {len(df)} records")
         return df
 
     @staticmethod

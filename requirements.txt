@@ -10,3 +10,4 @@ imbalanced-learn
 lime
 tensorflow
 scipy
+pyarrow

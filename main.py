@@ -45,8 +45,24 @@ def run_pipeline():
         # Q4: DATA PREPROCESSING
         # ══════════════════════════════════════════════════════════════
         logger.info("[Q4] Loading and preprocessing student data...")
-        raw_df = StudentDataLoader.load_bridge_sample(n_rows=500000)
-        X_all, y = StudentPreprocessor.process_bridge(raw_df)
+        
+        # Performance Enhancement: Check for preprocessed cache
+        if os.path.exists(Config.CACHED_DATA):
+            logger.info("Found cached preprocessed data. Loading from Parquet...")
+            X_all = pd.read_parquet(Config.CACHED_DATA)
+            y = X_all[Config.TARGET_COLUMN]
+            X_all = X_all.drop(columns=[Config.TARGET_COLUMN])
+        else:
+            logger.info("No cache found or cache disabled. Processing raw data...")
+            # Default to 100k for performance, can be increased for final runs
+            raw_df = StudentDataLoader.load_bridge_sample(n_rows=100000)
+            X_all, y = StudentPreprocessor.process_bridge(raw_df)
+            
+            # Save to cache for future runs
+            cache_df = X_all.copy()
+            cache_df[Config.TARGET_COLUMN] = y.values
+            cache_df.to_parquet(Config.CACHED_DATA)
+            logger.info(f"Preprocessed data cached to {Config.CACHED_DATA}")
 
         # Model features (excluding student ID which is only for grouping)
         model_features = [

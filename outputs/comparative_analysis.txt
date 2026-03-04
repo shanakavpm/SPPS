@@ -7,16 +7,16 @@ Student Performance Prediction System (SPPS)
 ----------------------------------------
 Model                  |     Acc |      F1 |    Prec |     Rec |     AUC
 ------------------------------------------------------------------------
-Logistic Regression    |  0.7721 |  0.8480 |  0.9438 |  0.7698 |  0.8561
-Random Forest          |  0.8453 |  0.9043 |  0.9251 |  0.8843 |  0.8836
-XGBoost                |  0.8340 |  0.8940 |  0.9460 |  0.8475 |  0.8985
-LightGBM               |  0.8340 |  0.8942 |  0.9445 |  0.8489 |  0.8965
+Logistic Regression    |  0.7922 |  0.8614 |  0.9390 |  0.7957 |  0.8729
+Random Forest          |  0.8413 |  0.9001 |  0.9200 |  0.8812 |  0.8875
+XGBoost                |  0.8424 |  0.8988 |  0.9387 |  0.8621 |  0.9063
+LightGBM               |  0.8416 |  0.8979 |  0.9416 |  0.8581 |  0.9085
 ------------------------------------------------------------------------
   (Deep Learning — evaluated on per-student sequences)
-LSTM                   |  0.9259 |  0.9231 |  0.9231 |  0.9231 |  0.9615
-GRU                    |  0.6667 |  0.6400 |  0.6667 |  0.6154 |  0.6758
+LSTM                   |  0.8889 |  0.8571 |  1.0000 |  0.7500 |  1.0000
+GRU                    |  0.3333 |  0.4000 |  0.3333 |  0.5000 |  0.4500
 
-Best overall model (by F1): LSTM (F1=0.9231)
+Best overall model (by F1): Random Forest (F1=0.9001)
 
 
 2. INTERPRETABILITY COMPARISON — Transparent vs. Black-Box

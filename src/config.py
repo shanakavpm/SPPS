@@ -15,6 +15,7 @@ class Config:
     # Dataset: KDD Cup 2010 — Bridge to Algebra 2008-2009
     BRIDGE_DIR = os.path.join(DATA_DIR, 'bridge_to_algebra_2008_2009')
     BRIDGE_TRAIN = os.path.join(BRIDGE_DIR, 'bridge_to_algebra_2008_2009_train.txt')
+    CACHED_DATA = os.path.join(DATA_DIR, 'preprocessed_cache.parquet')
 
     # Global Parameters
     RANDOM_STATE = 42
