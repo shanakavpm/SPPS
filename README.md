@@ -4,20 +4,29 @@ A machine learning framework for predicting student success using the KDD Cup 20
 
 ## 🚀 Quick Start
 
-1. **Install Dependencies**:
+1. **Extract the Dataset**:
+   The raw dataset is highly compressed. You must extract it before running the script.
+   ```bash
+   # Extract the 460.5 MB zip file into the 5.8 GB text file
+   cd data/
+   unzip bridge_to_algebra_2008_2009.zip
+   cd ..
+   ```
+
+2. **Install Dependencies**:
 
    ```bash
    pip install -r requirements.txt
    ```
 
-2. **Run the Pipeline**:
+3. **Run the Pipeline**:
 
    ```bash
    python main.py   # Windows
    python3 main.py  # Ubuntu / Linux / macOS
    ```
 
-3. **View Results**:
+4. **View Results**:
    - 📊 **Figures**: `figures/` — all charts (SHAP, LIME, PDP, confusion matrices, ROC curves, etc.)
    - 📝 **Outputs**: `outputs/` — cleaned data, data dictionary, cleaning log, comparative analysis report
 

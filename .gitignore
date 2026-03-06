@@ -28,6 +28,7 @@ Thumbs.db
 
 # Project-specific Data (Large datasets)
 data/bridge_to_algebra_2008_2009/*
+*.zip
 
 # Reports and logs
 *.log
