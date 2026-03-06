@@ -61,7 +61,3 @@ This project includes advanced data engineering to handle heavy pedagogical data
 - **Source**: PSLC DataShop (2010) KDD Cup 2010 Educational Data Mining Challenge
 - **URL**: https://pslcdatashop.web.cmu.edu/KDDCup/
 - **Target**: Binary classification — Correct First Attempt (1 = pass, 0 = fail)
-
----
-
-**Course**: Data Visualization Research Project
