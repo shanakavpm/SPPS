@@ -25,6 +25,7 @@ A machine learning framework for predicting student success using the KDD Cup 20
    python main.py   # Windows
    python3 main.py  # Ubuntu / Linux / macOS
    ```
+   > ⏱️ **Note:** The full pipeline (preprocessing, model training, evaluation, XAI suite, and report generation) takes approximately **3 minutes** to execute on standard hardware.
 
 4. **View Results**:
    - 📊 **Figures**: `figures/` — all charts (SHAP, LIME, PDP, confusion matrices, ROC curves, etc.)
